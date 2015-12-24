@@ -1,0 +1,11 @@
+<%= form_tag '/signup', method: 'post', :class => 'formSessions' do%>
+<%= label_tag "Email"%><br>
+<%= email_field_tag :email %><br>
+<%= label_tag "Password"%><br>
+<%= password_field_tag(:password) %><br>
+<%= label_tag "Password Confirmation"%><br>
+<%= password_field_tag(:password_confirmation) %><br>
+<%= button_tag "Submit", :class => 'btn-formSessions'%>
+<% end %>
+
+<%= button_tag "Log Out", :class => 'btn-logOut'%>
