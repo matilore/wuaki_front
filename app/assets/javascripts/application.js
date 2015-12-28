@@ -32,9 +32,10 @@ function handleError(req, status, error) {
 }
 
 
-function handleSuccess(data) {
+function handleSuccessLog(data) {
 	var token = data.auth_token;
 	window.localStorage.setItem('token', token);
+	window.location = '/all_medias'
 }
 
 function sendParamsLogin() { //mandare params a controller sessions di wuaki api
@@ -53,7 +54,7 @@ function sendParamsLogin() { //mandare params a controller sessions di wuaki api
 
 
 		$.when(sendCredentials).done(function(respSendCredentials) {
-		handleSuccess(respSendCredentials);
+		handleSuccessLog(respSendCredentials);
 		});
 	});
 }
@@ -70,73 +71,186 @@ function logOut() {
 	});
 };
 
+function loadAjax(url){
+	  return $.ajax({ 
+	    url: url,
+	    dataType:"json",
+	    type:"GET",
+		error: handleError
+	});
+	}
+
+
+//ALL_MEDIA.JS ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+function loadAllMedia() {
+
+	function showMedias(data) {
+
+		console.log(data.all_medias)
+
+		data.all_medias.forEach(function(media){
+			if (media.hasOwnProperty('seasons')) {
+				buildSerieList(media);
+			} else {
+				buildMovieList(media);
+			}
+		})
+		
+		
+	}
+
+	if ($('body').hasClass('all_medias-index') == true){
+
+	 $(document).ready(function(){
+
+
+		 	$('.page-header h1').text('All Media');
+
+			var showAllMedia = loadAjax('http://api.wuaki.dev:3000/v1/all_medias');
+
+			$.when(showAllMedia).done(function(response) {
+				//callback -> showMovies, showSeries...
+				showMedias(response);
+			});
+
+		})
+	}
+
+}
+
 //MOVIES.JS //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+function buildMovieList(movie) {
+	$(document.createElement('div')).attr('id', 'movie-' + movie.id).appendTo($('.medias'));
+	$(document.createElement('h1')).text(movie.title).addClass('title').appendTo($('#movie-' + movie.id));
+	$(document.createElement('p')).text(movie.plot).addClass('plot').appendTo($('#movie-' + movie.id));
+}
+
+function showMovies (data) {
+			data.movies.forEach(function(movie) {
+				buildMovieList(movie);
+			})
+		};
 
 
 function loadMovies() {
 
-	function loadajax(callback){
-	  $.ajax({ 
-	    url:'http://api.wuaki.dev:3000/v1/movies',
-	    dataType:"json",
-	    type:"GET",
-	    success: function(data) {
-	    	callback(data)
-	    }
-	  });
+	if ($('body').hasClass('movies-index') == true){
+
+		 $(document).ready(function(){
+
+		 	$('.page-header h1').text('Most Recent Movies');
+
+			var showAllMovies = loadAjax('http://api.wuaki.dev:3000/v1/movies');
+
+			$.when(showAllMovies).done(function(response) {
+			showMovies(response);
+			});
+		})
 	}
-
-	function showMovies (data) {
-			for(var i = 0; i <= data.movies.length -1; i++) {
-				$(document.createElement('div')).attr('id', 'movie' + i).appendTo($('.movies'));
-			 	$(document.createElement('h1')).text(data.movies[i].title).addClass('title').appendTo($('#movie' + i));
-				$(document.createElement('p')).text(data.movies[i].plot).addClass('plot').appendTo($('#movie' + i));
-			}
-		};
-
-	 $('.movies-index').ready(function(){
-		loadajax(showMovies)
-	})
 }
 
 
 //SERIES.JS///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-function loadSeries() {
+var cache = {};
 
-	function loadajax(callback){
-	  $.ajax({ 
-	    url:'http://api.wuaki.dev:3000/v1/series',
-	    dataType:"json",
-	    type:"GET",
-	    success: function(data) {
-	    	callback(data)
+function buildEpisodeList(episode, self) {
+	$(document.createElement('div')).attr('id', 'episode-' + episode.id).appendTo($(self.parent()));
+	$(document.createElement('h3')).text(episode.title).addClass('title').appendTo($('#episode-' + episode.id));
+	$(document.createElement('p')).text(episode.plot).addClass('plot').appendTo($('#episode-' + episode.id));
+}
 
-	    }
-	  });
-	}
+function showSeasons(serie_id, self, title) {
+	cache['serie_' + serie_id].serie.seasons.forEach(function(season){
+		buildSeasonList(season, self, title)
+				})
 
-	function showSeries(data) {
-			console.log(data.series[0])
-			for(var i = 0; i <= data.series.length -1; i++) {
-				$(document.createElement('div')).attr('id', 'serie' + i).appendTo($('.series'));
-			 	$(document.createElement('h1')).text(data.series[i].title).addClass('title').appendTo($('#serie' + i));
-			}
-		}
+}
 
-		function showSeasons() {
-			$('body').click(' series .title', function(event){
-				console.log(event.target)
-				// $(document.createElement('div').attr('id'))
-				// $(event.target).parent()
+
+function buildSeasonList(season, self, title, serie_id) {
+	$(document.createElement('div')).attr('id', title + '-' + season.season_number).addClass('col-md-offset-2').appendTo($(self.parent()));
+	$(document.createElement('h2')).text(season.season_number).addClass('season-' + season.season_number).appendTo($('#' + title + '-' + season.season_number));
+
+	$('body').click('h2.season-' + season.season_number, function(event){
+		console.log(season.episodes)
+		season.episodes.forEach(function(episode) {
+			buildEpisodeList(episode, self);
+
+		})
+		
+	})
+
+}
+
+
+
+
+
+
+function showSeries(data) {		
+			var id;
+			data.series.forEach(function(serie) {
+
+				buildSerieList(serie)		
 			})
 		}
 
-	 $('.series-index').ready(function(){
-		loadajax(showSeries);
-		showSeasons();
 
-	})
+function buildSerieList (serie) {
+
+		id = serie.id;
+		title = serie.title
+		$(document.createElement('div')).attr('id', 'serie-' + id).appendTo($('.medias'));
+		$(document.createElement('h1')).text(serie.title).addClass('title').appendTo($('#serie-' + id));
+
+		$('body').click('h1.title', function(event){
+
+			var self = $(event.target);
+			var showSeasonsResponse = loadAjax('http://api.wuaki.dev:3000/v1/series/' + serie.id);
+			
+			$.when(showSeasonsResponse).done(function(response) {
+				cache['serie_'+ id] = showSeasonsResponse.responseJSON;
+				showSeasons(id, self, title);				
+			});
+			
+		})
+
+}
+
+
+
+
+
+
+
+
+
+function loadSeries() {
+			
+		// 	$('body').click(' series .title', function(event){
+		// 		//$(document.createElement('div').attr('id'))
+		// 		var mov_div_id = $(event.target).parent().attr('id').split('-')[1];
+
+		// 		loadAjax('http://api.wuaki.dev:3000/v1/series/' + mov_div_id, showSeason);
+		// 	})
+		// }
+
+	if ($('body').hasClass('series-index') == true){
+
+		 $(document).ready(function(){
+		 	var showAllSeries = loadAjax('http://api.wuaki.dev:3000/v1/series');
+
+		 	$.when(showAllSeries).done(function(response) {
+			showSeries(response);
+			});
+
+		})
+	}
 }
 
 
@@ -149,5 +263,6 @@ $( document ).ready(function() {
     logOut();
     loadMovies();
     loadSeries();
+    loadAllMedia()
 
 });
