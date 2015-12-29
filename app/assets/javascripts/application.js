@@ -17,6 +17,53 @@
 //= require_tree .
 
 
+function btnId (target) { return $(target).attr('id') };
+
+
+function allMediaPage() {
+		if ($('button#all_media').hasClass('active') == true) {
+			loadAllMedia();
+		};
+}
+
+
+var cache = {};
+
+function menuButtons() {
+	$('.jumbotron .menu').click('button', function(event){
+
+		clickedBtn = $(event.target);
+		var id = btnId (clickedBtn);
+
+		if(!($(clickedBtn).hasClass('active'))) {
+
+			$($(clickedBtn).parent()).find('.active').toggleClass('active');
+			$(clickedBtn).addClass('active');
+
+			$($('.medias').children('div')).remove();
+
+		switch(id) {
+			case 'movies': 
+				loadMovies()
+				break;
+			case 'series':
+				loadSeries()
+				break;
+			case 'all_media':
+				loadAllMedia()
+				break;
+		}
+
+
+	}
+
+
+		
+
+	})
+}
+
+
 function postAjax(url, data) {
 	return $.ajax({
 		url: url,
@@ -86,9 +133,8 @@ function loadAjax(url){
 
 function loadAllMedia() {
 
-	function showMedias(data) {
 
-		console.log(data.all_medias)
+	function showMedias(data) {
 
 		data.all_medias.forEach(function(media){
 			if (media.hasOwnProperty('seasons')) {
@@ -101,10 +147,6 @@ function loadAllMedia() {
 		
 	}
 
-	if ($('body').hasClass('all_medias-index') == true){
-
-	 $(document).ready(function(){
-
 
 		 	$('.page-header h1').text('All Media');
 
@@ -114,9 +156,6 @@ function loadAllMedia() {
 				//callback -> showMovies, showSeries...
 				showMedias(response);
 			});
-
-		})
-	}
 
 }
 
@@ -138,9 +177,8 @@ function showMovies (data) {
 
 function loadMovies() {
 
-	if ($('body').hasClass('movies-index') == true){
+		$('medias').children().remove();
 
-		 $(document).ready(function(){
 
 		 	$('.page-header h1').text('Most Recent Movies');
 
@@ -149,48 +187,20 @@ function loadMovies() {
 			$.when(showAllMovies).done(function(response) {
 			showMovies(response);
 			});
-		})
-	}
+
 }
 
 
 //SERIES.JS///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var cache = {};
+function loadSeries() {
 
-function buildEpisodeList(episode, self) {
-	$(document.createElement('div')).attr('id', 'episode-' + episode.id).appendTo($(self.parent()));
-	$(document.createElement('h3')).text(episode.title).addClass('title').appendTo($('#episode-' + episode.id));
-	$(document.createElement('p')).text(episode.plot).addClass('plot').appendTo($('#episode-' + episode.id));
+	var showAllSeries = loadAjax('http://api.wuaki.dev:3000/v1/series');
+
+	$.when(showAllSeries).done(function(response) {
+		showSeries(response);
+	});
 }
-
-function showSeasons(serie_id, self, title) {
-	cache['serie_' + serie_id].serie.seasons.forEach(function(season){
-		buildSeasonList(season, self, title)
-				})
-
-}
-
-
-function buildSeasonList(season, self, title, serie_id) {
-	$(document.createElement('div')).attr('id', title + '-' + season.season_number).addClass('col-md-offset-2').appendTo($(self.parent()));
-	$(document.createElement('h2')).text(season.season_number).addClass('season-' + season.season_number).appendTo($('#' + title + '-' + season.season_number));
-
-	$('body').click('h2.season-' + season.season_number, function(event){
-		console.log(season.episodes)
-		season.episodes.forEach(function(episode) {
-			buildEpisodeList(episode, self);
-
-		})
-		
-	})
-
-}
-
-
-
-
-
 
 function showSeries(data) {		
 			var id;
@@ -207,50 +217,89 @@ function buildSerieList (serie) {
 		title = serie.title
 		$(document.createElement('div')).attr('id', 'serie-' + id).appendTo($('.medias'));
 		$(document.createElement('h1')).text(serie.title).addClass('title').appendTo($('#serie-' + id));
+}
 
-		$('body').click('h1.title', function(event){
+////////////////////////////////////APPARE IL TITOLO DELLA SERIE///////////////////////////////
 
-			var self = $(event.target);
-			var showSeasonsResponse = loadAjax('http://api.wuaki.dev:3000/v1/series/' + serie.id);
-			
-			$.when(showSeasonsResponse).done(function(response) {
-				cache['serie_'+ id] = showSeasonsResponse.responseJSON;
-				showSeasons(id, self, title);				
-			});
-			
-		})
+function clickOnTitle () {
+	$('.medias').on('click', 'h1.title', function(event){
 
+		var media_description = $(event.target).parent().attr('id').split('-');
+
+		var media_type = media_description[0];
+
+		var serie_id = media_description[1];
+
+		if (media_type.indexOf('serie') > -1) {
+
+				var self = $(event.target);
+
+				if (!($(self).hasClass('active'))) {
+					$(self).toggleClass('active');
+
+				var showSeasonsResponse = loadAjax('http://api.wuaki.dev:3000/v1/series/' + serie_id);
+					$.when(showSeasonsResponse).done(function(response) {
+						cache['serie_'+ serie_id] = showSeasonsResponse.responseJSON;
+						showSeasons(serie_id, self, title);				
+					});
+					
+				} else {
+					$(self).toggleClass('active');
+					$($($(self).parent()).find('div.seasons')).remove();
+
+				}
+
+			}
+	});
+}
+
+function showSeasons(serie_id, self, title) {
+	$(document.createElement('div')).addClass('seasons').appendTo($(self.parent()));
+	
+	cache['serie_' + serie_id].serie.seasons.forEach(function(season){
+	buildSeasonList(season, title)
+				})
+}
+
+function buildSeasonList(season, title, serie_id) {
+	$(document.createElement('div')).attr('id', title + '-' + season.season_number).addClass('col-md-offset-2').appendTo($('.seasons'));
+	$(document.createElement('h2')).text(season.season_number).addClass('season-' + season.season_number).appendTo($('#' + title + '-' + season.season_number));
 }
 
 
+//////////////////////////////////////////////// APPARE IL NUMERO DI STAGIONE //////////////////////////////////////////////
 
 
+function clickOnSeasonNumber() {
+
+	$('.medias').on('click', 'h2', function(event){
+
+		var serie_id = $($($(event.target).parent()).parent()).parent().attr('id').split('-')[1];
+		var season_id = $(event.target).attr('class').split('-')[1];
 
 
+		if (!($(event.target).hasClass('active'))) {
 
-
-
-function loadSeries() {
+			$(event.target).toggleClass('active');
+			$(document.createElement('div')).addClass('episodes').appendTo($($(event.target).parent()));
+			cache['serie_' + serie_id].serie.seasons[season_id - 1].episodes.forEach(function(episode) {
+				buildEpisodeList(episode);
+			})
 			
-		// 	$('body').click(' series .title', function(event){
-		// 		//$(document.createElement('div').attr('id'))
-		// 		var mov_div_id = $(event.target).parent().attr('id').split('-')[1];
+		} else {
+			$(event.target).toggleClass('active');
+			$($($(event.target).parent()).find('div.episodes')).remove();
+			
+		}
 
-		// 		loadAjax('http://api.wuaki.dev:3000/v1/series/' + mov_div_id, showSeason);
-		// 	})
-		// }
+	})
 
-	if ($('body').hasClass('series-index') == true){
+}
 
-		 $(document).ready(function(){
-		 	var showAllSeries = loadAjax('http://api.wuaki.dev:3000/v1/series');
-
-		 	$.when(showAllSeries).done(function(response) {
-			showSeries(response);
-			});
-
-		})
-	}
+function buildEpisodeList(episode) {
+	$(document.createElement('div')).attr('id', 'episode-' + episode.episode_number).addClass('col-md-offset-1').appendTo($('.episodes'));
+	$(document.createElement('h3')).text(episode.title).addClass('title').appendTo($('#episode-' + episode.episode_number));
+	$(document.createElement('p')).text(episode.plot).addClass('plot').appendTo($('#episode-' + episode.episode_number));
 }
 
 
@@ -259,10 +308,10 @@ function loadSeries() {
 
 
 $( document ).ready(function() {
+	allMediaPage()
     sendParamsLogin();
     logOut();
-    loadMovies();
-    loadSeries();
-    loadAllMedia()
-
+    menuButtons();
+    clickOnTitle();
+    clickOnSeasonNumber();
 });
