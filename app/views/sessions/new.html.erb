@@ -1,11 +1,25 @@
-<%= form_tag '/signup', method: 'post', :class => 'formSessions' do%>
-<%= label_tag "Email"%><br>
-<%= email_field_tag :email %><br>
-<%= label_tag "Password"%><br>
-<%= password_field_tag(:password) %><br>
-<%= label_tag "Password Confirmation"%><br>
-<%= password_field_tag(:password_confirmation) %><br>
-<button type="button" class="btn-formSessions">Submit</button>
-<% end %>
+<div class="center">
 
-<%= button_tag "Log Out", :class => 'btn-logOut'%>
+
+		<%= form_tag '/signup', method: 'post', :class => 'formSessions' do%>
+
+		<div class="form-group">
+		<%= label_tag "Email"%><br>
+		<%= email_field_tag :email %><br>
+		</div>
+
+		<div class="form-group">
+		<%= label_tag "Password"%><br>
+		<%= password_field_tag(:password) %><br>
+		</div>
+
+		<div class="form-group">
+		<%= label_tag "Password Confirmation"%><br>
+		<%= password_field_tag(:password_confirmation) %><br>
+		</div>
+
+		<button type="button" class="btn-formSessions">Submit</button>
+		<% end %>
+
+
+</div>

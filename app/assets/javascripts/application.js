@@ -42,23 +42,18 @@ function menuButtons() {
 
 			$($('.medias').children('div')).remove();
 
-		switch(id) {
-			case 'movies': 
-				loadMovies()
-				break;
-			case 'series':
-				loadSeries()
-				break;
-			case 'all_media':
-				loadAllMedia()
-				break;
+			switch(id) {
+				case 'movies': 
+					loadMovies()
+					break;
+				case 'series':
+					loadSeries()
+					break;
+				case 'all_media':
+					loadAllMedia()
+					break;
+			}
 		}
-
-
-	}
-
-
-		
 
 	})
 }
@@ -75,7 +70,9 @@ function postAjax(url, data) {
 }
 
 function handleError(req, status, error) {
+	window.location = 'sessions/new'
 	console.log("there has been an  error " + error);
+
 }
 
 
@@ -107,19 +104,25 @@ function sendParamsLogin() { //mandare params a controller sessions di wuaki api
 }
 
 function logOut() {
-	$('.btn-logOut').click(function(event) {
+	$('.logOut').click(function(event) {
 		event.preventDefault();
 		var auth_token_val = window.localStorage.getItem('token');
 
 		$.ajax({
 			url : 'http://api.wuaki.dev:3000/v1/sessions/' + auth_token_val,
-			type : 'DELETE'
+			type : 'DELETE',
+			// success: function() {
+			// 	window.location = '/sessions/new';
+			// }
 		});
 	});
 };
 
 function loadAjax(url){
-	  return $.ajax({ 
+	  return $.ajax({
+			headers: {
+		    "Authorization": window.localStorage.getItem('token')
+		},
 	    url: url,
 	    dataType:"json",
 	    type:"GET",
@@ -152,9 +155,9 @@ function loadAllMedia() {
 
 			var showAllMedia = loadAjax('http://api.wuaki.dev:3000/v1/all_medias');
 
-			$.when(showAllMedia).done(function(response) {
+			$.when(showAllMedia).done(function(data) {
 				//callback -> showMovies, showSeries...
-				showMedias(response);
+				showMedias(data);
 			});
 
 }
@@ -195,6 +198,8 @@ function loadMovies() {
 
 function loadSeries() {
 
+	$('.page-header h1').text('Most Recent Series');
+
 	var showAllSeries = loadAjax('http://api.wuaki.dev:3000/v1/series');
 
 	$.when(showAllSeries).done(function(response) {
@@ -203,7 +208,6 @@ function loadSeries() {
 }
 
 function showSeries(data) {		
-			var id;
 			data.series.forEach(function(serie) {
 
 				buildSerieList(serie)		
@@ -213,16 +217,19 @@ function showSeries(data) {
 
 function buildSerieList (serie) {
 
-		id = serie.id;
-		title = serie.title
+		var id = serie.id;
+		var title = serie.title
 		$(document.createElement('div')).attr('id', 'serie-' + id).appendTo($('.medias'));
 		$(document.createElement('h1')).text(serie.title).addClass('title').appendTo($('#serie-' + id));
 }
 
-////////////////////////////////////APPARE IL TITOLO DELLA SERIE///////////////////////////////
+	////////////////////////////////////APPARE IL TITOLO DELLA SERIE///////////////////////////////
 
 function clickOnTitle () {
+
 	$('.medias').on('click', 'h1.title', function(event){
+
+
 
 		var media_description = $(event.target).parent().attr('id').split('-');
 
@@ -230,7 +237,10 @@ function clickOnTitle () {
 
 		var serie_id = media_description[1];
 
+
+
 		if (media_type.indexOf('serie') > -1) {
+
 
 				var self = $(event.target);
 
@@ -240,12 +250,12 @@ function clickOnTitle () {
 				var showSeasonsResponse = loadAjax('http://api.wuaki.dev:3000/v1/series/' + serie_id);
 					$.when(showSeasonsResponse).done(function(response) {
 						cache['serie_'+ serie_id] = showSeasonsResponse.responseJSON;
-						showSeasons(serie_id, self, title);				
+						showSeasons(serie_id, self);				
 					});
 					
 				} else {
 					$(self).toggleClass('active');
-					$($($(self).parent()).find('div.seasons')).remove();
+					$($($(self).parent()).find('div.seasons' + serie_id)).remove();
 
 				}
 
@@ -253,21 +263,35 @@ function clickOnTitle () {
 	});
 }
 
-function showSeasons(serie_id, self, title) {
-	$(document.createElement('div')).addClass('seasons').appendTo($(self.parent()));
+var season_counter = 0;
+
+function showSeasons(serie_id, self) {
+
+	$(document.createElement('div')).addClass('seasons' + serie_id).appendTo($(self.parent()));
+
+	var title = cache['serie_' + serie_id].serie.title.split(/\W/g).join('');
+
+	
 	
 	cache['serie_' + serie_id].serie.seasons.forEach(function(season){
-	buildSeasonList(season, title)
+
+	buildSeasonList(season, title, serie_id);
 				})
+
+	season_counter = 0;
 }
+
+
 
 function buildSeasonList(season, title, serie_id) {
-	$(document.createElement('div')).attr('id', title + '-' + season.season_number).addClass('col-md-offset-2').appendTo($('.seasons'));
-	$(document.createElement('h2')).text(season.season_number).addClass('season-' + season.season_number).appendTo($('#' + title + '-' + season.season_number));
-}
+
+	$(document.createElement('div')).attr('id', title + '-' + season.season_number).addClass('col-md-offset-2').appendTo($('.seasons'+ serie_id));
+	$(document.createElement('h2')).text(season_counter += 1).addClass('season-' + season.season_number).appendTo($('#' + title + '-' + season.season_number));
+
+}	
 
 
-//////////////////////////////////////////////// APPARE IL NUMERO DI STAGIONE //////////////////////////////////////////////
+	//////////////////////////////////////////////// APPARE IL NUMERO DI STAGIONE //////////////////////////////////////////////
 
 
 function clickOnSeasonNumber() {
@@ -276,19 +300,21 @@ function clickOnSeasonNumber() {
 
 		var serie_id = $($($(event.target).parent()).parent()).parent().attr('id').split('-')[1];
 		var season_id = $(event.target).attr('class').split('-')[1];
+		var season_number = $(event.target).text();
 
 
 		if (!($(event.target).hasClass('active'))) {
 
-			$(event.target).toggleClass('active');
-			$(document.createElement('div')).addClass('episodes').appendTo($($(event.target).parent()));
-			cache['serie_' + serie_id].serie.seasons[season_id - 1].episodes.forEach(function(episode) {
-				buildEpisodeList(episode);
-			})
+			$(event.target).addClass('active');
+			$(document.createElement('div')).addClass('episodes' + season_id).appendTo($($(event.target).parent()));
+			cache['serie_' + serie_id].serie.seasons[season_number - 1].episodes.forEach(function(episode) {
+				buildEpisodeList(episode, season_id);
+			});
 			
 		} else {
-			$(event.target).toggleClass('active');
-			$($($(event.target).parent()).find('div.episodes')).remove();
+
+			$(event.target).removeClass('active');
+			$($(event.target).siblings('div')).remove();
 			
 		}
 
@@ -296,8 +322,8 @@ function clickOnSeasonNumber() {
 
 }
 
-function buildEpisodeList(episode) {
-	$(document.createElement('div')).attr('id', 'episode-' + episode.episode_number).addClass('col-md-offset-1').appendTo($('.episodes'));
+function buildEpisodeList(episode, season_id) {
+	$(document.createElement('div')).attr('id', 'episode-' + episode.episode_number).addClass('col-md-offset-1').appendTo($('.episodes' + season_id));
 	$(document.createElement('h3')).text(episode.title).addClass('title').appendTo($('#episode-' + episode.episode_number));
 	$(document.createElement('p')).text(episode.plot).addClass('plot').appendTo($('#episode-' + episode.episode_number));
 }
