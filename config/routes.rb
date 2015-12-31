@@ -4,4 +4,5 @@ Rails.application.routes.draw do
   resources :movies
   resources :series
   resources :all_medias
+  resources :purchases
 end

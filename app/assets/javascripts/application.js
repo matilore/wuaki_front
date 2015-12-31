@@ -77,8 +77,11 @@ function handleError(req, status, error) {
 
 
 function handleSuccessLog(data) {
+	console.log(data);
 	var token = data.auth_token;
+	var user_id = data.id
 	window.localStorage.setItem('token', token);
+	window.localStorage.setItem('id', user_id)
 	window.location = '/all_medias'
 }
 
@@ -163,21 +166,6 @@ function loadAllMedia() {
 }
 
 //MOVIES.JS //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-function buildMovieList(movie) {
-	$(document.createElement('div')).attr('id', 'movie-' + movie.id).appendTo($('.medias'));
-	$(document.createElement('h1')).text(movie.title).addClass('title').appendTo($('#movie-' + movie.id));
-	$(document.createElement('p')).text(movie.plot).addClass('plot').appendTo($('#movie-' + movie.id));
-}
-
-function showMovies (data) {
-			data.movies.forEach(function(movie) {
-				buildMovieList(movie);
-			})
-		};
-
-
 function loadMovies() {
 
 		$('medias').children().remove();
@@ -192,6 +180,38 @@ function loadMovies() {
 			});
 
 }
+
+function buildMovieList(movie) {
+	$(document.createElement('div')).attr('id', 'movie-' + movie.id).appendTo($('.medias'));
+	$(document.createElement('h1')).text(movie.title).addClass('title').appendTo($('#movie-' + movie.id));
+	$(document.createElement('button')).text('Purchase').attr('class', 'btn-purchase pull-right').appendTo($('#movie-' + movie.id));
+	$(document.createElement('p')).text(movie.plot).addClass('plot').attr('style', 'width:50%').appendTo($('#movie-' + movie.id));
+}
+
+function showMovies (data) {
+			data.movies.forEach(function(movie) {
+				buildMovieList(movie);
+			})
+		};
+
+function clickTitleMovie() {
+
+	var media_description = $(event.target).attr('id').split('-');
+
+	var media_type = media_description[0];
+
+	var serie_id = media_description[1];
+
+
+	$('medias').on('click', 'h1', function() {
+		console.log(media_type)
+
+		if (media_type == 'movie') {
+			console.log(true);
+		};
+	})
+}
+
 
 
 //SERIES.JS///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -285,8 +305,9 @@ function showSeasons(serie_id, self) {
 
 function buildSeasonList(season, title, serie_id) {
 
-	$(document.createElement('div')).attr('id', title + '-' + season.season_number).addClass('col-md-offset-2').appendTo($('.seasons'+ serie_id));
-	$(document.createElement('h2')).text(season_counter += 1).addClass('season-' + season.season_number).appendTo($('#' + title + '-' + season.season_number));
+	$(document.createElement('div')).attr('id', 'season' + title + '-' + season.season_number).addClass('col-md-offset-2').appendTo($('.seasons'+ serie_id));
+	$(document.createElement('button')).text('Purchase').attr('class', 'btn-purchase pull-right').appendTo($('#season' + title + '-' + season.season_number));
+	$(document.createElement('h2')).text(season_counter += 1).addClass('season-' + season.season_number).appendTo($('#season' + title + '-' + season.season_number));
 
 }	
 
@@ -325,13 +346,118 @@ function clickOnSeasonNumber() {
 function buildEpisodeList(episode, season_id) {
 	$(document.createElement('div')).attr('id', 'episode-' + episode.episode_number).addClass('col-md-offset-1').appendTo($('.episodes' + season_id));
 	$(document.createElement('h3')).text(episode.title).addClass('title').appendTo($('#episode-' + episode.episode_number));
-	$(document.createElement('p')).text(episode.plot).addClass('plot').appendTo($('#episode-' + episode.episode_number));
+	$(document.createElement('p')).text(episode.plot).addClass('plot').attr('style', 'width:50%').appendTo($('#episode-' + episode.episode_number));
 }
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	
+//PURCHASE//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+function purchaseClick() {
+	$('.medias').on('click', '.btn-purchase', function(event) {
+		
+		var purchase_id =$($(event.target).parent()).attr('id');
+
+		if (!($(event.target).hasClass('active'))) {
+			
+
+			
+
+			$(event.target).toggleClass('active')
+
+			$(document.createElement('div')).text('Please choose your favorite purchase option').addClass('purchase-box').attr('id', 'purchasebox-' + purchase_id).appendTo($(event.target).parent());
+			
+			$(document.createElement('div')).addClass('length-option').attr('id', purchase_id).appendTo($('#purchasebox-' + purchase_id));
+			$(document.createElement('button')).text('Two days').addClass('twoDays-option').appendTo($('#' + purchase_id + '.length-option'));
+			$(document.createElement('button')).text('One week').addClass('oneWeek-option').appendTo($('#' + purchase_id + '.length-option'));
+
+
+			$(document.createElement('div')).addClass('quality-option').attr('id', purchase_id).appendTo($('#purchasebox-' + purchase_id));
+			$(document.createElement('button')).text('Low Definition').addClass('sd-option').appendTo($('#' + purchase_id + '.quality-option'));
+			$(document.createElement('button')).text('High Definition').addClass('hd-option').appendTo($('#' + purchase_id + '.quality-option'));
+
+			$(document.createElement('button')).text('Confirm Purchase').addClass('submit-purchase').appendTo($('#purchasebox-' + purchase_id));
+
+
+		} else {
+			$(event.target).toggleClass('active');
+			if (purchase_id.split('-')[0] == 'movie') {
+			$($(event.target).siblings().eq(2)).remove();
+			} else {
+				$($(event.target).siblings().eq(1)).remove();
+			}
+
+		}
+
+
+	} )
+
+}
+
+/////////////////////////// send info for purchase ////////////////////////
+
+
+function submitPurchase() {
+
+	$('.medias').on('click', '.submit-purchase', function(event) {
+
+		var user_id = window.localStorage.getItem('token');
+		var movie_id = $(event.target).parents().eq(1).attr('id').split('-')[1];
+		var media_type = $(event.target).parents().eq(1).attr('id').split('-')[0];
+
+		if (media_type != 'movie') {
+			media_type = 'serie';
+		}
+
+		console.log(media_type)
+
+	})
+}
+
+
+
+
+
+
+function postAjax(url, data) {
+	return $.ajax({
+		url: url,
+		type: 'POST',
+		dataType: "json",
+		data: data,
+		error: handleError
+	})
+}
+
+function sendParamsLogin() { //mandare params a controller sessions di wuaki api
+	$('.btn-formSessions').click(function(event) {
+		var email = $('#email').val();
+		var password = $('#password').val();
+
+		var credentials = {
+					email: email,
+					password: password
+				};
+		var data = {data_value: JSON.stringify(credentials)};
+		
+		var sendCredentials = postAjax('http://localhost:3000/v1/sessions', data);
+
+
+
+		$.when(sendCredentials).done(function(respSendCredentials) {
+		handleSuccessLog(respSendCredentials);
+		});
+	});
+}
+
+
+
+
+		//var sendPurchaseData = postAjax('http://localhost:3000/v1/sessions', data);
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $( document ).ready(function() {
 	allMediaPage()
@@ -340,4 +466,6 @@ $( document ).ready(function() {
     menuButtons();
     clickOnTitle();
     clickOnSeasonNumber();
+    purchaseClick();
+    submitPurchase()
 });
